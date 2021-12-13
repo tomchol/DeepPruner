@@ -28,20 +28,15 @@ from dataloader import sceneflow_collector as lt
 from dataloader import sceneflow_loader as DA
 from models.deeppruner import DeepPruner
 from loss_evaluation import loss_evaluation
-from tensorboardX import SummaryWriter
-import skimage
+from torch.utils.tensorboard import SummaryWriter
 import time
 import logging
 from models.config import config as config_args
 from setup_logging import setup_logging
 
 parser = argparse.ArgumentParser(description='DeepPruner')
-parser.add_argument('--datapath_monkaa', default='/',
-                    help='datapath for sceneflow monkaa dataset')
-parser.add_argument('--datapath_flying', default='/',
-                    help='datapath for sceneflow flying dataset')
-parser.add_argument('--datapath_driving', default='/',
-                    help='datapath for sceneflow driving dataset')
+parser.add_argument('--datapath', default='/media/jiaren/ImageNet/SceneFlowData/',
+                    help='datapath')
 parser.add_argument('--epochs', type=int, default=100,
                     help='number of epochs to train')
 parser.add_argument('--loadmodel', default=None,
@@ -75,21 +70,20 @@ args.maxdisp = config_args.max_disp
 setup_logging(args.logging_filename)
 
 
-all_left_img, all_right_img, all_left_disp, test_left_img, test_right_img, test_left_disp = lt.dataloader(args.datapath_monkaa,
-args.datapath_flying, args.datapath_driving)
+all_left_img, all_right_img, all_left_disp, test_left_img, test_right_img, test_left_disp = lt.dataloader(args.datapath)
 
 
 TrainImgLoader = torch.utils.data.DataLoader(
     DA.SceneflowLoader(all_left_img, all_right_img, all_left_disp, args.cost_aggregator_scale*8.0, True),
-    batch_size=1, shuffle=True, num_workers=8, drop_last=False)
+    batch_size=2, shuffle=True, num_workers=0, drop_last=False)
 
 TestImgLoader = torch.utils.data.DataLoader(
     DA.SceneflowLoader(test_left_img, test_right_img, test_left_disp, args.cost_aggregator_scale*8.0, False),
-    batch_size=1, shuffle=False, num_workers=4, drop_last=False)
+    batch_size=2, shuffle=False, num_workers=0, drop_last=False)
 
 
 model = DeepPruner()
-writer = SummaryWriter()
+writer = SummaryWriter(args.save_dir)
 
 if args.cuda:
     model = nn.DataParallel(model)
@@ -102,7 +96,7 @@ if args.loadmodel is not None:
 
 logging.info('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
-optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999))
+optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))
 
 
 def train(imgL, imgR, disp_L, iteration):
@@ -149,10 +143,10 @@ def test(imgL, imgR, disp_L, iteration, pad_w, pad_h):
         optimizer.zero_grad()
 
         result = model(imgL, imgR)
-        output = []
-        for ind in range(len(result)):
-            output.append(result[ind][:, pad_h:, pad_w:])
-        result = output
+        # output = []
+        # for ind in range(len(result)):
+        #     output.append(result[ind][:, pad_h:, pad_w:])
+        # result = output
 
         loss, output_disparity = loss_evaluation(result, disp_true, mask, args.cost_aggregator_scale)
         epe_loss = torch.mean(torch.abs(output_disparity[mask] - disp_true[mask]))
@@ -161,11 +155,11 @@ def test(imgL, imgR, disp_L, iteration, pad_w, pad_h):
 
 
 def adjust_learning_rate(optimizer, epoch):
-    if epoch <= 20:
+    if epoch <= 50:
         lr = 0.001
-    elif epoch <= 40:
+    elif epoch <= 140:
         lr = 0.0007
-    elif epoch <= 60:
+    elif epoch <= 200:
         lr = 0.0003
     else:
         lr = 0.0001
@@ -174,13 +168,13 @@ def adjust_learning_rate(optimizer, epoch):
 
 
 def main():
-    for epoch in range(0, args.epochs):
+    for epoch in range(1, args.epochs+1):
         total_train_loss = 0
         total_test_loss = 0
         total_epe_loss = 0
         adjust_learning_rate(optimizer, epoch)
 
-        if epoch % 1 == 0 and epoch != 0:
+        if epoch % 10 == 0 and epoch != 0:
             logging.info("testing...")
             for batch_idx, (imgL, imgR, disp_L, pad_w, pad_h) in enumerate(TestImgLoader):
                 start_time = time.time()
@@ -188,11 +182,11 @@ def main():
                 total_test_loss += test_loss
                 total_epe_loss += epe_loss
 
-                logging.info('Iter %d 3-px error in val = %.3f, time = %.2f \n' %
-                      (batch_idx, epe_loss, time.time() - start_time))
+                # logging.info('Iter %d 3-px error in val = %.3f, time = %.2f \n' %
+                #      (batch_idx, epe_loss, time.time() - start_time))
 
-                writer.add_scalar("val-loss-iter", test_loss, epoch * 4370 + batch_idx)
-                writer.add_scalar("val-epe-loss-iter", epe_loss, epoch * 4370 + batch_idx)
+                # writer.add_scalar("val-loss-iter", test_loss, epoch * 4370 + batch_idx)
+                # writer.add_scalar("val-epe-loss-iter", epe_loss, epoch * 4370 + batch_idx)
 
             logging.info('epoch %d total test loss = %.3f' % (epoch, total_test_loss / len(TestImgLoader)))
             writer.add_scalar("val-loss", total_test_loss / len(TestImgLoader), epoch)
@@ -211,7 +205,7 @@ def main():
         writer.add_scalar("loss", total_train_loss / len(TrainImgLoader), epoch)
 
         # SAVE
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             savefilename = args.savemodel + 'finetune_' + str(epoch) + '.tar'
             torch.save({
                 'epoch': epoch,

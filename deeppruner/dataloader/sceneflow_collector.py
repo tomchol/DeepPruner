@@ -30,6 +30,46 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
+def dataloader(filepath):
+    classes = [d for d in os.listdir(filepath) if os.path.isdir(os.path.join(filepath, d))]
+    image = [img for img in classes if img.find('frames_cleanpass') > -1]
+    disp = [dsp for dsp in classes if dsp.find('disparity') > -1]
+
+    monkaa_path = filepath + [x for x in image if 'monkaa' in x][0]
+    monkaa_disp = filepath + [x for x in disp if 'monkaa' in x][0]
+
+    monkaa_dir = os.listdir(monkaa_path)
+
+    all_left_img = []
+    all_right_img = []
+    all_left_disp = []
+    test_left_img = []
+    test_right_img = []
+    test_left_disp = []
+
+    for dd in monkaa_dir:
+        for im in os.listdir(monkaa_path + '/' + dd + '/left/'):
+            if is_image_file(monkaa_path + '/' + dd + '/left/' + im):
+                all_left_img.append(monkaa_path + '/' + dd + '/left/' + im)
+            all_left_disp.append(monkaa_disp + '/' + dd + '/left/' + im.split(".")[0] + '.pfm')  # png
+
+        for im in os.listdir(monkaa_path + '/' + dd + '/right/'):
+            if is_image_file(monkaa_path + '/' + dd + '/right/' + im):
+                all_right_img.append(monkaa_path + '/' + dd + '/right/' + im)
+
+        for im in os.listdir(monkaa_path + '/' + dd + '/test/left/'):
+            if is_image_file(monkaa_path + '/' + dd + '/test/left/' + im):
+                test_left_img.append(monkaa_path + '/' + dd + '/test/left/' + im)
+            test_left_disp.append(monkaa_disp + '/' + dd + '/test/left/' + im.split(".")[0] + '.pfm')  # png
+
+        for im in os.listdir(monkaa_path + '/' + dd + '/test/right/'):
+            if is_image_file(monkaa_path + '/' + dd + '/test/right/' + im):
+                test_right_img.append(monkaa_path + '/' + dd + '/test/right/' + im)
+
+    return all_left_img, all_right_img, all_left_disp, test_left_img, test_right_img, test_left_disp
+
+
+"""
 def dataloader(filepath_monkaa, filepath_flying, filepath_driving):
 
     try:
@@ -45,18 +85,29 @@ def dataloader(filepath_monkaa, filepath_flying, filepath_driving):
         test_left_disp = []
 
         for dd in monkaa_dir:
-            for im in os.listdir(os.path.join(monkaa_path, dd, 'left')):
-                if is_image_file(os.path.join(monkaa_path, dd, 'left', im)) and is_image_file(
-                        os.path.join(monkaa_path, dd, 'right', im)):
-                    all_left_img.append(os.path.join(monkaa_path, dd, 'left', im))
-                    all_left_disp.append(os.path.join(monkaa_disp, dd, 'left', im.split(".")[0] + '.pfm'))
-                    all_right_img.append(os.path.join(monkaa_path, dd, 'right', im))
+            for im in os.listdir(monkaa_path + '/' + dd + '/left/'):
+                if is_image_file(monkaa_path + '/' + dd + '/left/' + im):
+                    all_left_img.append(monkaa_path + '/' + dd + '/left/' + im)
+                all_left_disp.append(monkaa_disp + '/' + dd + '/left/' + im.split(".")[0] + '.pfm')  # png
+
+            for im in os.listdir(monkaa_path + '/' + dd + '/right/'):
+                if is_image_file(monkaa_path + '/' + dd + '/right/' + im):
+                    all_right_img.append(monkaa_path + '/' + dd + '/right/' + im)
+
+            for im in os.listdir(monkaa_path + '/' + dd + '/test/left/'):
+                if is_image_file(monkaa_path + '/' + dd + '/test/left/' + im):
+                    test_left_img.append(monkaa_path + '/' + dd + '/test/left/' + im)
+                test_left_disp.append(monkaa_disp + '/' + dd + '/test/left/' + im.split(".")[0] + '.pfm')  # png
+
+            for im in os.listdir(monkaa_path + '/' + dd + '/test/right/'):
+                if is_image_file(monkaa_path + '/' + dd + '/test/right/' + im):
+                    test_right_img.append(monkaa_path + '/' + dd + '/test/right/' + im)
 
     except:
         logging.error("Some error in Monkaa, Monkaa might not be loaded correctly in this case...")
         raise Exception('Monkaa dataset couldn\'t be loaded correctly.')
 
-    
+
     try:
         flying_path = os.path.join(filepath_flying, 'frames_cleanpass')
         flying_disp = os.path.join(filepath_flying, 'disparity')
@@ -121,4 +172,6 @@ def dataloader(filepath_monkaa, filepath_flying, filepath_driving):
         logging.error("Some error in Driving, Driving might not be loaded correctly in this case...")
         raise Exception('Driving dataset couldn\'t be loaded correctly.')
 
+
     return all_left_img, all_right_img, all_left_disp, test_left_img, test_right_img, test_left_disp
+"""

@@ -26,12 +26,17 @@ import math
 DEFAULT_TRAIN_IMAGE_HEIGHT = 256
 DEFAULT_TRAIN_IMAGE_WIDTH = 512
 
+
 def default_loader(path):
     return Image.open(path).convert('RGB')
 
 
 def disparity_loader(path):
     return rp.readPFM(path)
+
+
+def disparity_loader_png(path):
+    return rp.readPNG(path)
 
 
 class SceneflowLoader(data.Dataset):
@@ -57,7 +62,7 @@ class SceneflowLoader(data.Dataset):
 
         left_img = self.loader(left_img)
         right_img = self.loader(right_img)
-        left_disp, left_scale = self.dploader(left_disp)
+        left_disp, _, _ = self.dploader(left_disp)
         left_disp = np.ascontiguousarray(left_disp, dtype=np.float32)
 
         if self.training:
