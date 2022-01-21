@@ -89,7 +89,6 @@ if args.cuda:
     model = nn.DataParallel(model)
     model.cuda()
 
-
 if args.loadmodel is not None:
     state_dict = torch.load(args.loadmodel)
     model.load_state_dict(state_dict['state_dict'], strict=True)

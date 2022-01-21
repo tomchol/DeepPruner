@@ -28,9 +28,9 @@ def get_transform():
     t_list = [
         transforms.ToTensor(),
         ColorJitter(
-            brightness=0.4,
-            contrast=0.4,
-            saturation=0.4,
+            brightness=0.3,
+            contrast=0.3,
+            saturation=0.3,
         ),
         transforms.Normalize(**normalize),
     ]

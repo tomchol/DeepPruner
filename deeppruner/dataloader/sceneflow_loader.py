@@ -25,7 +25,8 @@ import math
 # train/ validation image crop size constants
 DEFAULT_TRAIN_IMAGE_HEIGHT = 256
 DEFAULT_TRAIN_IMAGE_WIDTH = 512
-
+# DEFAULT_TRAIN_IMAGE_HEIGHT = 640
+# DEFAULT_TRAIN_IMAGE_WIDTH = 768
 
 def default_loader(path):
     return Image.open(path).convert('RGB')
